@@ -8,6 +8,14 @@ from shared.audit import audit, load_audit_config, finding_is_filtered
 __description__ = "Identify potential issues such as public S3 buckets"
 
 
+def sanitize_resource_details(resource_details):
+    """Sanitize sensitive information in resource details"""
+    if "MinimumPasswordLength" in resource_details:
+        resource_details["MinimumPasswordLength"] = "REDACTED"
+    if "Policy lacks" in resource_details:
+        resource_details["Policy lacks"] = "REDACTED"
+    return resource_details
+
 def audit_command(accounts, config, args):
     """Audit the accounts"""
 
@@ -26,6 +34,7 @@ def audit_command(accounts, config, args):
             finding["finding_type_metadata"] = conf
             print(json.dumps(finding, sort_keys=True))
         elif args.markdown:
+            sanitized_details = sanitize_resource_details(finding.resource_details)
             print(
                 "*Audit Finding: [{}] - {}*\\nAccount: {} ({}) - {}\\nDescription: {}\\nResource: `{}`\\nDetails:```{}```".format(
                     conf["severity"].upper(),
@@ -35,7 +44,7 @@ def audit_command(accounts, config, args):
                     finding.region.name,
                     conf["description"],
                     finding.resource_id,
-                    str(finding.resource_details).replace("\n", "\\n"),
+                    str(sanitized_details).replace("\n", "\\n"),
                 )
             )
         else:
